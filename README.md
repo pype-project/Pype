@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://github.com/gndctrl2mjrtm/pype/blob/master/docs/assets/pype_logo.png?raw=true" alt="Pype logo"/>
+  <img src="https://github.com/pype-project/Pype/blob/master/docs/assets/pype_logo.png?raw=true" alt="Pype logo"/>
 </p>
 
 # Pype
