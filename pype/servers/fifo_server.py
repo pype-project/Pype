@@ -193,6 +193,8 @@ class FIFOQueue(object):
         if not wrap:
             if batch_size == 1:
                 output = output[0]
+        if wrap:
+            output = [output]
         if remove is True:
             if batch_size == -1:
                 self._queue = []

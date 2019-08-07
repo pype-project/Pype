@@ -8,6 +8,7 @@ import time
 import ray
 
 import pype
+from pype.utils.ray_functions import init_ray
 
 
 @ray.remote
@@ -19,16 +20,13 @@ def f(server):
 
 
 def main():
-    ray.init()
+    init_ray()
     server = pype.Server.remote()
     server.add.remote('data', use_locking=False)
     f.remote(server)
+
     for i in range(4):
-        while True:
-            if ray.get(server.can_pull.remote('data', batch_size=5)):
-                break
-            else:
-                time.sleep(1e-2)
+        pype.pull_wait(server, 'data', batch_size=5)
         data = ray.get(server.pull.remote('data', batch_size=5, wait_batch=True))
         print(data)
 

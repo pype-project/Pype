@@ -18,3 +18,10 @@ class QueueExistsError(Exception):
     def __init__(self, message, errors):
         super().__init__(self, message, errors)
         self.errors = errors
+
+
+class QueueTimeoutError(Exception):
+
+    def __init__(self, message, errors):
+        super().__init__(self, message, errors)
+        self.errors = errors

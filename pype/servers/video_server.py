@@ -49,6 +49,9 @@ class VideoServer(object):
         if (file is None) and (camera is None):
             raise UserWarning("Must provide either a file or camera arg")
         elif not (file is None):
+            if not os.path.exists(file):
+                raise SystemError(
+                    "File path does not exist: {}".format(file))
             _camera_cv2id = file
         elif not (camera is None):
             _camera_cv2id = camera
@@ -94,18 +97,19 @@ class VideoServer(object):
             int(self.camera_height * self.scale))
         while True:
             ret, frame = self.video_data.read()
-            frame = cv2.resize(frame, size)
-            data = {
-                "frame"      : frame,
-                "time"       : '{}_{}'.format(time.ctime(), time.time()),
-                "stream_name": self.stream_name
-            }
-            data = ray.put(data)
-            if ret is True:
-                if self.wait:
-                    while not (ray.get(self.server.can_push.remote(
-                            self.output_queues[0]))):
-                        time.sleep(1e-4)
-                self.server.push.remote(data, self.output_queues)
-            else:
-                break
+            if ret:
+                frame = cv2.resize(frame, size)
+                data = {
+                    "frame"      : frame,
+                    "time"       : '{}_{}'.format(time.ctime(), time.time()),
+                    "stream_name": self.stream_name
+                }
+                data = ray.put(data)
+                if ret is True:
+                    if self.wait:
+                        while not (ray.get(self.server.can_push.remote(
+                                self.output_queues[0]))):
+                            time.sleep(1e-4)
+                    self.server.push.remote(data, self.output_queues)
+                else:
+                    break
