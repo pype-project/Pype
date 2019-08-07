@@ -67,3 +67,101 @@ video_server = pype.VideoServer.remote(server, camera=0, output_queues=('frames'
 while True:
     data = ray.get(server.pull.remote('frames'))
 ```
+
+#### Locking Mechanisms
+```python
+import pype
+import time
+import ray
+
+
+@ray.remote
+def f(server):
+    while True:
+        if ray.get(server.can_pull.remote('data')):
+            data = ray.get(server.pull.remote('data'))
+        else:
+            time.sleep(1e-4)
+
+
+ray.init()
+server = pype.Server.remote()
+server.add.remote('data', use_locking=True)
+f.remote(server)
+
+for i in range(20):
+    while True:
+        if ray.get(server.can_push.remote('data')):
+            break
+        else:
+            time.sleep(1e-3)
+    server.push.remote(i, 'data')
+    server.print_queue.remote('data')
+
+time.sleep(3)
+ray.shutdown()
+```
+
+#### Data Communication Chains
+```python
+import pype
+import time
+import ray
+
+
+@ray.remote
+def start(server, output_name):
+    for i in range(100):
+        while True:
+            if ray.get(server.can_push.remote(output_name)):
+                server.push.remote(i, output_name)
+                break
+            else:
+                time.sleep(1e-4)
+
+
+@ray.remote
+def f(server, input_name, output_name):
+    while True:
+        if ray.get(server.can_pull.remote(input_name)):
+            data = ray.get(server.pull.remote(input_name))
+            server.push.remote(data, output_name)
+        else:
+            time.sleep(1e-4)
+
+
+def main():
+    ray.init()
+    server = pype.Server.remote()
+    server.add.remote('data_0', use_locking=True)
+    server.add.remote('data_1', use_locking=True)
+    server.add.remote('data_2', use_locking=True)
+    server.add.remote('data_3', use_locking=True)
+    server.add.remote('data_4', use_locking=True)
+    server.add.remote('data_5', use_locking=True)
+    server.add.remote('data_6', use_locking=True)
+
+    start.remote(server, 'data_0')
+    f.remote(server, 'data_0', 'data_1')
+    f.remote(server, 'data_1', 'data_2')
+    f.remote(server, 'data_2', 'data_3')
+    f.remote(server, 'data_3', 'data_4')
+    f.remote(server, 'data_4', 'data_5')
+    f.remote(server, 'data_5', 'data_6')
+
+    for i in range(100):
+        while True:
+            if ray.get(server.can_pull.remote('data_6')):
+                break
+            else:
+                time.sleep(1e-3)
+        data = ray.get(server.pull.remote('data_6'))
+        print("Received ", data)
+        server.print_queue.remote('data_6')
+
+    time.sleep(3)
+    ray.shutdown()
+
+if __name__ == "__main__":
+    main()
+```
