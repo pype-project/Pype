@@ -41,6 +41,10 @@ that Python developers have to come to expect.
 This system can work from anywhere from a laptop to large data centers by connecting to an existing Ray cluster
 or generating a new one with interfaces for PBS/Torque and Kubernetes (coming soon).
 
+<p align="center">
+  <img src="https://github.com/pype-project/Pype/blob/master/docs/assets/pype_diagram.png?raw=true" alt="Pype logo"/>
+</p>
+
 ### The Basics
 
 #### Start Server
