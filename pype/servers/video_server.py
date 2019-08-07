@@ -3,7 +3,7 @@
 """
 
 """
-from __future__ import print_function, division
+from __future__ import division, print_function
 
 import os
 import time
@@ -17,28 +17,42 @@ Video source: {}
 Queue: {}
 """
 
+
 @ray.remote
 class VideoServer(object):
 
     def __init__(self,
                  server,
-                 output_queues ='frame',
-                 camera=None,
-                 file=None,
-                 stream_name=None,
-                 wait=True,
-                 verbose=True,
-                 scale=1):
+                 output_queues: (str, list, tuple) = 'frame',
+                 camera: int = None,
+                 file: str = None,
+                 stream_name: str = None,
+                 wait: bool = True,
+                 verbose: bool = True,
+                 scale: (float, int) = 1):
+        """
+
+        :param server:
+        :param output_queues:
+        :param camera:
+        :param file:
+        :param stream_name:
+        :param wait:
+        :param verbose:
+        :param scale:
+        """
         if not isinstance(output_queues, (str, tuple, list)):
             raise TypeError(
                 "output_queues arg must be str, tuple, or list, not".format(
                     type(output_queues).__name__))
+
         if (file is None) and (camera is None):
             raise UserWarning("Must provide either a file or camera arg")
         elif not (file is None):
             _camera_cv2id = file
         elif not (camera is None):
             _camera_cv2id = camera
+
         timestamp = time.ctime().replace(' ', '_')
         if stream_name is None:
             if camera is None:
@@ -49,8 +63,7 @@ class VideoServer(object):
         if not isinstance(scale, (int, float)):
             raise TypeError("Scale must be type float, not {}".format(
                 type(scale).__name__))
-        self.scale = scale
-        self.server = server
+
         if isinstance(output_queues, str):
             self.output_queues = [output_queues]
         else:
@@ -58,6 +71,9 @@ class VideoServer(object):
         if not isinstance(wait, bool):
             raise TypeError("wait arg must be boolean, not {}".format(
                 type(wait).__name__))
+
+        self.scale = scale
+        self.server = server
         self.wait = wait
         self.verbose = verbose
         self.video_data = cv2.VideoCapture(_camera_cv2id)
@@ -70,20 +86,25 @@ class VideoServer(object):
         self.main()
 
     def main(self):
-        size = (int(self.camera_width / self.scale),
-                int(self.camera_height / self.scale))
+        """
+
+        :return:
+        """
+        size = (int(self.camera_width * self.scale),
+            int(self.camera_height * self.scale))
         while True:
             ret, frame = self.video_data.read()
             frame = cv2.resize(frame, size)
             data = {
-                "frame": frame,
-                "time": time.ctime(),
-                "stream_name" : self.stream_name
+                "frame"      : frame,
+                "time"       : '{}_{}'.format(time.ctime(), time.time()),
+                "stream_name": self.stream_name
             }
             data = ray.put(data)
             if ret is True:
                 if self.wait:
-                    while not (ray.get(self.server.can_push.remote(self.output_queues[0]))):
+                    while not (ray.get(self.server.can_push.remote(
+                            self.output_queues[0]))):
                         time.sleep(1e-4)
                 self.server.push.remote(data, self.output_queues)
             else:

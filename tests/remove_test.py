@@ -19,8 +19,9 @@ def main():
     server.push.remote(data, 'data', expand=True)
     #server.print_queue.remote('data')
     #time.sleep(10)
-    data = ray.get(server.pull.remote('data', batch_size=50))
+    data = ray.get(server.pull.remote('data', batch_size=50, remove=False))
     print(data)
+    ray.get(server.print_queue.remote('data'))
 
 
 if __name__ == "__main__":

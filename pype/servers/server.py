@@ -3,27 +3,21 @@
 """
 
 """
-from __future__ import print_function, division
+from __future__ import division, print_function
+
 import ray
 
 from pype.servers.fifo_server import RayFIFOQueue
-from pype.utils.exceptions import QueueNotFoundError, QueueExistsError
+from pype.utils.exceptions import QueueExistsError, QueueNotFoundError
 
 
 @ray.remote
 class Server(object):
 
     def __init__(self,
-                 verbose: bool=True):
+                 verbose: bool = True):
         self.queues = {}
         self.verbose = verbose
-
-    def len(self) -> int:
-        """
-
-        :return:
-        """
-        return len(self.queues)
 
     def __len__(self) -> int:
         """
@@ -39,25 +33,7 @@ class Server(object):
         :param queue:
         :return:
         """
-        if not isinstance(queue, str):
-            raise TypeError("Queue must be type str, not {}".format(
-                type(queue).__name__))
-        if not (queue in self.queues.keys()):
-            if self.verbose:
-                print("Creating new queue: {}".format(queue))
-            self.queues[queue] = RayFIFOQueue.remote()
-        else:
-            # TODO: Fix QueueExistsError input
-            raise QueueExistsError("{} already exists".format(queue))
-
-    def add(self,
-            queue: str):
-        """
-
-        :param queue:
-        :return:
-        """
-        self.__add__(queue)
+        self.add(queue)
 
     def __sub__(self,
                 queue: str):
@@ -73,26 +49,104 @@ class Server(object):
             # TODO: Delete remote process
             pass
 
+    def _verify_queue_arg(self, queues: str):
+        """
+
+        :param queues:
+        :return:
+        """
+        if not isinstance(queues, (str, list, tuple)):
+            raise TypeError(
+                "Queue must be type (str, list, tuple), not {}".format(
+                    type(queues).__name__))
+
+    def queue_len(self, queue):
+        return ray.get(self.queues[queue].queue_len.remote())
+
+    def len(self) -> int:
+        """
+
+        :return:
+        """
+        return len(self.queues)
+
+    def print_queue(self,
+                    queue: (str, list, tuple),
+                    verify: bool = False):
+        """
+
+        :param queue:
+        :param verify:
+        :return:
+        """
+        if verify:
+            self._verify_queue_arg(queue)
+        self.queues[queue].print_queue.remote()
+
+    def add(self,
+            queue: str,
+            use_locking: bool = False,
+            use_semaphore: bool = False,
+            semaphore: int = 10,
+            max_data_len: int = -1
+            ):
+        """
+
+        :param queue:
+        :param use_locking:
+        :param use_semaphore:
+        :param semaphore:
+        :param max_data_len:
+        :return:
+        """
+        if not isinstance(queue, str):
+            raise TypeError("Queue must be type str, not {}".format(
+                type(queue).__name__))
+        if not (queue in self.queues.keys()):
+            if self.verbose:
+                print("Creating new queue: {}".format(queue))
+            self.queues[queue] = RayFIFOQueue.remote(
+                use_locking = use_locking,
+                use_semaphore = use_semaphore,
+                semaphore = semaphore            )
+        else:
+            # TODO: Fix QueueExistsError input
+            raise QueueExistsError("{} already exists".format(queue))
+
     def pull(self,
              queue: (str, list, tuple),
-             create: bool = True) -> list:
+             batch_size: int = 1,
+             index: int = -1,
+             wait_batch: bool = False,
+             wait_batch_time: float = 1e-4,
+             wrap: bool = False,
+             remove: bool = True,
+             create: bool = True,
+             flip: bool = False,
+             verify: bool = False) -> list:
         """
 
         :param queue:
         :param create:
         :return:
         """
-        if not isinstance(queue, (str, list, tuple)):
-            raise TypeError(
-                "Queue must be type (str, list, tuple), not {}".format(
-                    type(queue).__name__))
+        if verify:
+            self._verify_queue_arg(queue)
         if not (queue in self.queues.keys()):
             if create:
                 self.__add__(queue)
             return []
         else:
             if ray.get(self.queues[queue].can_pull.remote()):
-                return ray.get(self.queues[queue].pull.remote())
+                return ray.get(self.queues[queue].pull.remote(
+                    index=index,
+                    batch_size=batch_size,
+                    wait_batch=wait_batch,
+                    wait_batch_time=wait_batch_time,
+                    wrap=wrap,
+                    remove=remove,
+                    verify=verify,
+                    flip=flip))
             else:
                 return []
 
@@ -103,7 +157,7 @@ class Server(object):
              verify: bool = True,
              expand: bool = False) -> None:
         """
-        
+        Push data to the selected queue(s)
         :param data:
         :param queues:
         :param create:
@@ -111,24 +165,32 @@ class Server(object):
         :param expand:
         :return:
         """
+        # Wrap the queues for queue iteration
         if isinstance(queues, str):
             queues = [queues]
+
+        # Verify that the user args are correct
         if verify:
-            if not isinstance(queues, (str, list, tuple)):
-                raise TypeError(
-                    "Queues must be type (str, list, tuple) not {}".format(
-                        type(queues).__name__))
+            # Check queues arg type
+            self._verify_queue_arg(queues)
+
+            # Check for multiple instances of queue names
             queue_names = list(self.queues.keys())
             for q in queues:
                 if queue_names.count(q) > 1:
                     raise Exception("Multiple queue counts of {}".format(q))
+
+        # Iterate over the target queues and push the data
         for q in queues:
+            # If the queue is not created yet, create or exit
             if not (q in self.queues.keys()):
                 if create:
                     self.__add__(q)
                 else:
                     # TODO: Fix QueueNotFoundError input
                     raise QueueNotFoundError('{} not found'.format(q))
+
+            # Push data to target queue
             self.queues[q].push.remote(data, expand=expand)
 
     def can_push(self,
@@ -149,6 +211,7 @@ class Server(object):
 
     def can_pull(self,
                  queue,
+                 batch_size=None,
                  create=False):
         """
 
@@ -164,4 +227,5 @@ class Server(object):
                 self.__add__(queue)
             else:
                 return False
-        return ray.get(self.queues[queue].can_pull.remote())
+        return ray.get(self.queues[queue].can_pull.remote(
+            batch_size=batch_size))
