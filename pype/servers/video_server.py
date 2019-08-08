@@ -7,10 +7,11 @@ from __future__ import division, print_function
 
 import os
 import time
-import pype
 
 import cv2
 import ray
+
+import pype
 
 video_server_init_message = """
 Initializing video server...
@@ -109,7 +110,7 @@ class VideoServer(object):
                 if ret is True:
                     if self.wait:
                         pype.push_wait(self.server, self.output_queues[0])
-                        #while not (ray.get(self.server.can_push.remote(
+                        # while not (ray.get(self.server.can_push.remote(
                         #        self.output_queues[0]))):
                         #    time.sleep(1e-4)
                     self.server.push.remote(data, self.output_queues)

@@ -60,7 +60,7 @@ server.push.remote(42, 'meaning_of_life')
 
 #### Pull
 ```python
-answer = server.pull.remote('meaning_of_life')
+answer = ray.get(server.pull.remote('meaning_of_life'))
 ```
 
 #### Remote Video Server in 5 lines of Python
