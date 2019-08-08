@@ -88,6 +88,7 @@ class Server(object):
             use_locking: bool = False,
             use_semaphore: bool = False,
             semaphore: int = 10,
+            batch_lock: int = None,
             max_data_len: int = -1
             ):
         """
@@ -106,9 +107,10 @@ class Server(object):
             if self.verbose:
                 print("Creating new queue: {}".format(queue))
             self.queues[queue] = RayFIFOQueue.remote(
-                use_locking = use_locking,
-                use_semaphore = use_semaphore,
-                semaphore = semaphore            )
+                use_locking=use_locking,
+                use_semaphore=use_semaphore,
+                semaphore=semaphore,
+                batch_lock=batch_lock)
         else:
             # TODO: Fix QueueExistsError input
             raise QueueExistsError("{} already exists".format(queue))

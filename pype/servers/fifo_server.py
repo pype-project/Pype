@@ -17,6 +17,7 @@ class FIFOQueue(object):
                  use_semaphore: bool = True,
                  semaphore: int = 10,
                  start_at_right: bool = True,
+                 batch_lock: int = None,
                  max_data_len: int = -1):
         """
 
@@ -45,6 +46,7 @@ class FIFOQueue(object):
         self.use_locking = use_locking
         self.use_semaphore = use_semaphore
         self.semaphore = semaphore
+        self.batch_lock = batch_lock
         # TODO: Implement max data len
         self.max_data_len = max_data_len
         # TODO: Better variable name
@@ -104,6 +106,8 @@ class FIFOQueue(object):
             return not self.push_locked
         elif self.use_semaphore:
             return self.semaphore > 0
+        elif not (self.batch_lock is None):
+            return len(self._queue) < self.batch_lock
         else:
             return True
 
@@ -171,13 +175,6 @@ class FIFOQueue(object):
             self.push_locked = False
         if self.use_semaphore:
             self.semaphore += 1
-        if wait_batch:
-            if batch_size != -1:
-                while True:
-                    if len(self._queue) >= batch_size:
-                        break
-                    else:
-                        time.sleep(wait_batch_time)
         if batch_size == -1:
             output = self._queue
         else:
@@ -212,6 +209,7 @@ class RayFIFOQueue(FIFOQueue):
     def __init__(self,
                  use_locking: bool = False,
                  use_semaphore: bool = False,
+                 batch_lock: int = None,
                  semaphore: int = 10):
         """
 
@@ -221,4 +219,5 @@ class RayFIFOQueue(FIFOQueue):
         """
         super().__init__(use_locking=use_locking,
                          use_semaphore=use_semaphore,
+                         batch_lock=batch_lock,
                          semaphore=semaphore)

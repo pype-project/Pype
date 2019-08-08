@@ -27,11 +27,7 @@ def main():
     f.remote(server)
 
     for i in range(20):
-        while True:
-            if ray.get(server.can_push.remote('data')):
-                break
-            else:
-                time.sleep(1e-3)
+        pype.push_wait('data')
         server.push.remote(i, 'data')
         server.print_queue.remote('data')
 

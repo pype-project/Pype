@@ -37,31 +37,24 @@ def main():
     server.add.remote('data_0', use_locking=True)
     server.add.remote('data_1', use_locking=True)
     server.add.remote('data_2', use_locking=True)
-    server.add.remote('data_3', use_locking=True)
-    server.add.remote('data_4', use_locking=True)
-    server.add.remote('data_5', use_locking=True)
-    server.add.remote('data_6', use_locking=True)
 
     start.remote(server, 'data_0')
+
     f.remote(server, 'data_0', 'data_1')
     f.remote(server, 'data_1', 'data_2')
-    f.remote(server, 'data_2', 'data_3')
-    f.remote(server, 'data_3', 'data_4')
-    f.remote(server, 'data_4', 'data_5')
-    f.remote(server, 'data_5', 'data_6')
 
     for i in range(100):
-        while True:
-            if ray.get(server.can_pull.remote('data_6')):
-                break
-            else:
-                time.sleep(1e-3)
-        data = ray.get(server.pull.remote('data_6'))
-        print("Received ", data)
-        server.print_queue.remote('data_6')
+        pype.pull_wait('data_2')
+        data = ray.get(server.pull.remote('data_2'))
+        server.print_queue.remote('data_2')
 
     time.sleep(3)
     ray.shutdown()
 
 if __name__ == "__main__":
     main()
+
+
+
+
+

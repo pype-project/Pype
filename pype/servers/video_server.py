@@ -7,6 +7,7 @@ from __future__ import division, print_function
 
 import os
 import time
+import pype
 
 import cv2
 import ray
@@ -107,9 +108,10 @@ class VideoServer(object):
                 data = ray.put(data)
                 if ret is True:
                     if self.wait:
-                        while not (ray.get(self.server.can_push.remote(
-                                self.output_queues[0]))):
-                            time.sleep(1e-4)
+                        pype.push_wait(self.server, self.output_queues[0])
+                        #while not (ray.get(self.server.can_push.remote(
+                        #        self.output_queues[0]))):
+                        #    time.sleep(1e-4)
                     self.server.push.remote(data, self.output_queues)
                 else:
                     break

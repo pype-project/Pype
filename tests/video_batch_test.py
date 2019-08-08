@@ -12,15 +12,17 @@ import pype
 
 
 def main():
-    ray.init()
+    pype.init_ray()
     server = pype.Server.remote()
-    server.add.remote('frames', use_locking=False)
-    video_server = pype.VideoServer.remote(server, camera=0, scale=1.,
+    server.add.remote('frames', use_locking=False, batch_lock=10)
+    video_server = pype.VideoServer.remote(server, camera=0, scale=0.5,
                                            output_queues=('frames'))
     while True:
-        data = ray.get(server.pull.remote('frames', batch_size=-1,
-                                          wrap=True, flip=True))
+        pype.pull_wait(server, 'frames', batch_size=10)
+        data = ray.get(server.pull.remote('frames', batch_size=10,
+                                          wrap=False, flip=True))
         if len(data) > 0:
+            print("Len batch: ", len(data))
             for d in data:
                 frame = d['frame']
                 cv2.imshow('frames', frame)
