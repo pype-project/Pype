@@ -12,18 +12,22 @@ import pype
 
 
 def main():
-    ray.init()
+    pype.init_ray()
     server = pype.Server.remote()
     server.add.remote('frames', use_locking=False)
-    video_server = pype.VideoServer.remote(server, camera=0, scale=0.5, output_queues=('frames'))
+    video_server = pype.VideoServer.remote(server, camera=0, scale=1, output_queues=('frames'))
     while True:
-        data = ray.get(server.pull.remote('frames', batch_size=-1))
+        data = ray.get(server.pull.remote('frames', batch_size=-1, flip=True))
+        # print(data)
         if len(data) > 0:
-            frame = data['frame']
-            cv2.imshow('frames', frame)
-            cv2.waitKey(1)
+            print(ray.get(server.queue_len.remote('frames')))
+            print("len data ", len(data))
+            for d in data:
+                frame = d['frame']
+                cv2.imshow('frames', frame)
+                cv2.waitKey(1)
         else:
-            time.sleep(1e-3)
+            time.sleep(1e-4)
 
 
 if __name__ == '__main__':

@@ -110,9 +110,6 @@ class VideoServer(object):
                 if ret is True:
                     if self.wait:
                         pype.push_wait(self.server, self.output_queues[0])
-                        # while not (ray.get(self.server.can_push.remote(
-                        #        self.output_queues[0]))):
-                        #    time.sleep(1e-4)
                     self.server.push.remote(data, self.output_queues)
                 else:
                     break

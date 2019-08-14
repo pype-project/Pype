@@ -18,7 +18,7 @@ class FIFOQueue(object):
                  semaphore: int = 10,
                  start_at_right: bool = True,
                  batch_lock: int = None,
-                 max_data_len: int = -1):
+                 max_size: int = -1):
         """
 
         :param use_locking:
@@ -48,7 +48,7 @@ class FIFOQueue(object):
         self.semaphore = semaphore
         self.batch_lock = batch_lock
         # TODO: Implement max data len
-        self.max_data_len = max_data_len
+        self.max_size = max_size
         # TODO: Better variable name
         self.start_at_right = start_at_right
         if use_locking:
@@ -93,6 +93,8 @@ class FIFOQueue(object):
         :return:
         """
         if not (batch_size is None):
+            if batch_size == -1:
+                return len(self._queue) > 0
             return len(self._queue) >= batch_size
         return len(self._queue) > 0
 
@@ -187,11 +189,9 @@ class FIFOQueue(object):
         if len(output) == 0:
             return []
         output = list(map(self.postprocess_val, output))
-        if not wrap:
-            if batch_size == 1:
-                output = output[0]
         if wrap:
-            output = [output]
+            if not isinstance(output, list):
+                output = [output]
         if remove is True:
             if batch_size == -1:
                 self._queue = []
