@@ -5,6 +5,8 @@
 # Pype
 ## ***Python Data Pipes for Mulitprocessing Systems***
 
+#### ***Warning, Pype is pre-release and unpublished, there will be bugs, keep updated for the first release of Pype***
+
 ### What is Pype?
 Pype is a simple-to-use framework designed for data communication between multiple Ray processes.
 With Pype, developers can quickly test and create new multiprocessing systems without having to
