@@ -65,15 +65,6 @@ server.push.remote(42, 'meaning_of_life')
 answer = ray.get(server.pull.remote('meaning_of_life'))
 ```
 
-#### Remote Video Server in 5 lines of Python
-```python
-import pype
-server = pype.Server.remote()
-video_server = pype.VideoServer.remote(server, camera=0, output_queues=('frames'))
-while True:
-    data = ray.get(server.pull.remote('frames'))
-```
-
 #### Locking Mechanisms
 ```python
 import pype
@@ -84,11 +75,8 @@ import ray
 @ray.remote
 def f(server):
     while True:
-        if ray.get(server.can_pull.remote('data')):
-            data = ray.get(server.pull.remote('data'))
-        else:
-            time.sleep(1e-4)
-
+        pype.pull_wait(server, 'data')
+        data = ray.get(server.pull.remote('data'))
 
 ray.init()
 server = pype.Server.remote()
@@ -96,11 +84,7 @@ server.add.remote('data', use_locking=True)
 f.remote(server)
 
 for i in range(20):
-    while True:
-        if ray.get(server.can_push.remote('data')):
-            break
-        else:
-            time.sleep(1e-3)
+    pype.push_wait(server, 'data')
     server.push.remote(i, 'data')
     server.print_queue.remote('data')
 
@@ -118,23 +102,16 @@ import ray
 @ray.remote
 def start(server, output_name):
     for i in range(100):
-        while True:
-            if ray.get(server.can_push.remote(output_name)):
-                server.push.remote(i, output_name)
-                break
-            else:
-                time.sleep(1e-4)
+        pype.push_wait(server, output_name)
+        server.push.remote(i, output_name)
 
 
 @ray.remote
 def f(server, input_name, output_name):
     while True:
-        if ray.get(server.can_pull.remote(input_name)):
-            data = ray.get(server.pull.remote(input_name))
-            server.push.remote(data, output_name)
-        else:
-            time.sleep(1e-4)
-
+        pype.pull_wait(server, input_name)
+        data = ray.get(server.pull.remote(input_name))
+        server.push.remote(data, output_name)
 
 def main():
     ray.init()
@@ -156,11 +133,7 @@ def main():
     f.remote(server, 'data_5', 'data_6')
 
     for i in range(100):
-        while True:
-            if ray.get(server.can_pull.remote('data_6')):
-                break
-            else:
-                time.sleep(1e-3)
+        pype.pull_wait(server, 'data_6')
         data = ray.get(server.pull.remote('data_6'))
         print("Received ", data)
         server.print_queue.remote('data_6')
