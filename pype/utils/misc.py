@@ -12,7 +12,7 @@ from pype.utils.exceptions import QueueTimeoutError
 
 def pull_wait(server,
               queue: str,
-              wait_time: float = 1e-3,
+              wait_time: float = 5e-3,
               batch_size: int = None,
               timeout: int = 300):
     """
@@ -38,7 +38,7 @@ def pull_wait(server,
 
 def push_wait(server,
               queue: str,
-              wait_time: float =1e-3,
+              wait_time: float =5e-3,
               timeout: int = 300):
     """
 

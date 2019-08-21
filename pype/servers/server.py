@@ -7,7 +7,7 @@ from __future__ import division, print_function
 
 import ray
 
-from pype.servers.fifo_server import RayFIFOQueue
+from pype.servers.queue import RayQueue
 from pype.utils.exceptions import QueueExistsError, QueueNotFoundError
 
 
@@ -15,7 +15,9 @@ from pype.utils.exceptions import QueueExistsError, QueueNotFoundError
 class Server(object):
 
     def __init__(self,
-                 verbose: bool = True):
+                 verbose: bool = True,
+                 queue_type='FIFO'):
+        self.queue_type = queue_type
         self.queues = {}
         self.verbose = verbose
 
@@ -59,6 +61,11 @@ class Server(object):
             raise TypeError(
                 "Queue must be type (str, list, tuple), not {}".format(
                     type(queues).__name__))
+
+    def all_initalized(self):
+        for q in self.queues.keys():
+            active = ray.get(self.queues[q].is_active.remote())
+            print("Queue {} is initialized.".format(q))
 
     def queue_len(self, queue):
         return ray.get(self.queues[queue].queue_len.remote())
@@ -106,7 +113,7 @@ class Server(object):
         if not (queue in self.queues.keys()):
             if self.verbose:
                 print("Creating new queue: {}".format(queue))
-            self.queues[queue] = RayFIFOQueue.remote(
+            self.queues[queue] = RayQueue.remote(
                 use_locking=use_locking,
                 use_semaphore=use_semaphore,
                 semaphore=semaphore,
@@ -119,8 +126,6 @@ class Server(object):
              queue: (str, list, tuple),
              batch_size: int = 1,
              index: int = -1,
-             wait_batch: bool = False,
-             wait_batch_time: float = 1e-4,
              wrap: bool = False,
              remove: bool = True,
              create: bool = True,
@@ -143,8 +148,6 @@ class Server(object):
                 return ray.get(self.queues[queue].pull.remote(
                     index=index,
                     batch_size=batch_size,
-                    wait_batch=wait_batch,
-                    wait_batch_time=wait_batch_time,
                     wrap=wrap,
                     remove=remove,
                     verify=verify,

@@ -78,32 +78,58 @@ class NullDetector(object):
 
 
 def main():
-    pype.init_ray()
+    #pype.init_ray()
+    ray.init()
+
+    ray.timeline(filename="timeline.json")
+
     server = pype.Server.remote()
     server.add.remote('frame', use_locking=False)
-    # server.add.remote('person', use_locking=False)
-    # server.add.remote('face', use_locking=False)
-    # server.add.remote('pose', use_locking=False)
-    # server.add.remote('object', use_locking=False)
+    #server.add.remote('person', use_locking=False)
+    # # server.add.remote('face', use_locking=False)
+    server.add.remote('pose', use_locking=False)
+    server.add.remote('object', use_locking=False)
+    server.add.remote('action', use_locking=False)
     # server.add.remote('action', use_locking=False)
+    # server.add.remote('action1', use_locking=False)
     # server.add.remote('counter', use_locking=False)
     # server.add.remote('results')
 
-    for _ in range(1):
-        NullVideoServer.remote(server, output_queues='frame')
 
     person_models = [NullDetector.remote(server, input_queue='frame',
                                          output_queues=['pose'],
                                          batch_size=-1) for _ in range(1)]
     person_models = [NullDetector.remote(server, input_queue='pose',
-                                         output_queues=['objects'],
+                                         output_queues=['object'],
                                          batch_size=-1) for _ in range(1)]
-    person_models = [NullDetector.remote(server, input_queue='objects',
+    person_models = [NullDetector.remote(server, input_queue='object',
                                          output_queues=['action'],
                                          batch_size=-1) for _ in range(1)]
     # person_models = [NullDetector.remote(server, input_queue='action',
     #                                      output_queues=['action1'],
     #                                      batch_size=-1) for _ in range(1)]
+    # person_models = [NullDetector.remote(server, input_queue='action1',
+    #                                      output_queues=['action2'],
+    #                                      batch_size=-1) for _ in range(1)]
+    # person_models = [NullDetector.remote(server, input_queue='action2',
+    #                                      output_queues=['action3'],
+    #                                      batch_size=-1) for _ in range(1)]
+    # person_models = [NullDetector.remote(server, input_queue='action3',
+    #                                      output_queues=['action4'],
+    #                                      batch_size=-1) for _ in range(1)]
+    # person_models = [NullDetector.remote(server, input_queue='action4',
+    #                                      output_queues=['action5'],
+    #                                      batch_size=-1) for _ in range(1)]
+    # person_models = [NullDetector.remote(server, input_queue='action5',
+    #                                      output_queues=['action6'],
+    #                                      batch_size=-1) for _ in range(1)]
+    # person_models = [NullDetector.remote(server, input_queue='action6',
+    #                                      output_queues=['action7'],
+    #                                      batch_size=-1) for _ in range(1)]
+    time.sleep(3)
+    ray.timeline(filename="timeline.json")
+    for _ in range(1):
+        NullVideoServer.remote(server, output_queues='frame')
     # person_models = [NullDetector.remote(server, input_queue='action1',
     #                                      output_queues=['action2'],
     #                                      batch_size=-1) for _ in range(1)]
@@ -132,21 +158,20 @@ def main():
     #                                      output_queues=['action']) for _ in range(1)]
     # action_models = [NullDetector.remote(server, input_queue='action',
     #                                      output_queues=['results']) for _ in range(1)]
+    ray.get(server.all_initalized.remote())
     time_elapsed = 0
     count = 0
     start_time = time.time()
+    ray.timeline(filename="timeline.json")
     while True:
-        #pype.pull_wait(server, 'pose')
+        pype.pull_wait(server, 'action')
         data = ray.get(server.pull.remote('action'))
-
-        if len(data) > 0:
             #time_elapsed += time.time()-data[0]
-            count += len(data)
+        count += len(data)
             # print(count)
-            if time.time()-start_time > 60:
-                break
-        else:
-            time.sleep(1e-4)
+        if time.time()-start_time > 10:
+            ray.timeline(filename="timeline.json")
+            break
 
     print("Throughput: {}".format(count/(time.time()-start_time)))
     ray.shutdown()
@@ -157,3 +182,9 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+"""
+123.12156349316523
+78.85535030409181
+60.73117300593765
+"""

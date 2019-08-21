@@ -13,11 +13,8 @@ import pype
 @ray.remote
 def f(server):
     while True:
-        if ray.get(server.can_pull.remote('data')):
-            data = ray.get(server.pull.remote('data'))
-        else:
-            time.sleep(1e-2)
-
+        pype.pull_wait(server, 'data')
+        data = ray.get(server.pull.remote('data'))
 
 def main():
     ray.init()
@@ -27,7 +24,7 @@ def main():
     f.remote(server)
 
     for i in range(20):
-        pype.push_wait('data')
+        pype.push_wait(server, 'data')
         server.push.remote(i, 'data')
         server.print_queue.remote('data')
 
